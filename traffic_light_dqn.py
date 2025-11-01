@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
 '''
-@author: hzw77, gjz_5038
 
 python TrafficLightDQN.py SEED setting_memo
 
