@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-
 '''
-@author: hzw77, gjz5038
-
 Network agent from agent.py
 
 '''
