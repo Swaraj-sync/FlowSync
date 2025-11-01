@@ -1,0 +1,21 @@
+<routes>
+    <vType id="Car" accel="0.8" decel="4.5" sigma="0.5" length="3" minGap="1" maxSpeed="16.67" guiShape="passenger"/>
+
+    <route id="r_N1_N2_main" edges="E1 E4 E8"/>       <route id="r_N1_N2_via_J4" edges="E1 E3 E6 E10 E8"/> <route id="r_N2_N1_main" edges="O8 O4 O1"/>       <route id="r_N2_N1_via_J4" edges="O8 E7 E9 O3 O1"/> <route id="r_N3_N4_main" edges="E2 E3 E5"/>       <route id="r_N3_N4_via_J4" edges="E2 E4 E7 E9 E5"/> <route id="r_N4_N3_main" edges="O5 O3 O2"/>       <route id="r_N4_N3_via_J4" edges="O5 E6 E10 O4 O2"/> <route id="r_N1_N4" edges="E1 E3 E5"/>            <route id="r_N3_N2" edges="E2 E4 E8"/>            <route id="r_N4_N2" edges="O5 E6 E10 E8"/>        <route id="r_N2_N3" edges="O8 E7 E9 O3 O2"/>        <flow id="f_N1_N2_main" type="Car" route="r_N1_N2_main" begin="0" end="3600" period="12"/>
+    <flow id="f_N1_N2_via_J4" type="Car" route="r_N1_N2_via_J4" begin="0" end="3600" period="12"/>
+
+    <flow id="f_N2_N1_main" type="Car" route="r_N2_N1_main" begin="0" end="3600" period="12"/>
+    <flow id="f_N2_N1_via_J4" type="Car" route="r_N2_N1_via_J4" begin="0" end="3600" period="12"/>
+
+    <flow id="f_N3_N4_main" type="Car" route="r_N3_N4_main" begin="0" end="3600" period="12"/>
+    <flow id="f_N3_N4_via_J4" type="Car" route="r_N3_N4_via_J4" begin="0" end="3600" period="12"/>
+
+    <flow id="f_N4_N3_main" type="Car" route="r_N4_N3_main" begin="0" end="3600" period="12"/>
+    <flow id="f_N4_N3_via_J4" type="Car" route="r_N4_N3_via_J4" begin="0" end="3600" period="12"/>
+
+    <flow id="f_N1_N4" type="Car" route="r_N1_N4" begin="0" end="3600" period="12"/>
+    <flow id="f_N3_N2" type="Car" route="r_N3_N2" begin="0" end="3600" period="12"/>
+    <flow id="f_N4_N2" type="Car" route="r_N4_N2" begin="0" end="3600" period="12"/>
+    <flow id="f_N2_N3" type="Car" route="r_N2_N3" begin="0" end="3600" period="12"/>
+
+</routes>

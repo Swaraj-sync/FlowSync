@@ -1,0 +1,23 @@
+<edges>
+    <edge id="E1" from="N1" to="J1" priority="78" numLanes="2" speed="19.44"/>
+    <edge id="E2" from="N3" to="J1" priority="78" numLanes="2" speed="19.44"/>
+    <edge id="E3" from="J1" to="J2" priority="78" numLanes="2" speed="19.44"/>
+    <edge id="E4" from="J1" to="J3" priority="78" numLanes="2" speed="19.44"/>
+    <edge id="E5" from="J2" to="N4" priority="78" numLanes="2" speed="19.44"/>
+    <edge id="E6" from="J2" to="J4" priority="78" numLanes="2" speed="19.44"/>
+    <edge id="E7" from="J3" to="J4" priority="78" numLanes="2" speed="19.44"/>
+    <edge id="E8" from="J3" to="N2" priority="78" numLanes="2" speed="19.44"/>
+    <edge id="E9" from="J4" to="J2" priority="78" numLanes="2" speed="19.44"/>
+    <edge id="E10" from="J4" to="J3" priority="78" numLanes="2" speed="19.44"/>
+
+    <edge id="O1" from="J1" to="N1" priority="46" numLanes="2" speed="11.11"/>
+    <edge id="O2" from="J1" to="N3" priority="46" numLanes="2" speed="11.11"/>
+    <edge id="O3" from="J2" to="J1" priority="46" numLanes="2" speed="11.11"/>
+    <edge id="O4" from="J3" to="J1" priority="46" numLanes="2" speed="11.11"/>
+    <edge id="O5" from="N4" to="J2" priority="46" numLanes="2" speed="11.11"/>
+    <edge id="O6" from="J4" to="J2" priority="46" numLanes="2" speed="11.11"/>
+    <edge id="O7" from="J4" to="J3" priority="46" numLanes="2" speed="11.11"/>
+    <edge id="O8" from="N2" to="J3" priority="46" numLanes="2" speed="11.11"/>
+    <edge id="O9" from="J2" to="J4" priority="46" numLanes="2" speed="11.11"/>
+    <edge id="O10" from="J3" to="J4" priority="46" numLanes="2" speed="11.11"/>
+</edges>
