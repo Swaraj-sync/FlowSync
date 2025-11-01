@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
 '''
-@author: hzw77, gjz5038
 
 Controling agent, mainly choosing actions
 
