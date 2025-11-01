@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
-
 '''
-This module implements the Explainable AI (XAI) layer for FlowSync,
-as described in the presentation.
+This module implements the Explainable AI (XAI) layer for FlowSync
 
 It uses LIME (Local Interpretable Model-agnostic Explanations)
 to explain why a specific decision (action) was taken given a state.
