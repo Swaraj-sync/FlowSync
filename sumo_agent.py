@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
-
 '''
-@author: hzw77, gjz5038
-
 Interacting with traffic_light_dqn.py and map_computor.py
 
 1) retriving values from sumo_computor.py
-
 2) update state
-
 3) controling logic
 
 '''
