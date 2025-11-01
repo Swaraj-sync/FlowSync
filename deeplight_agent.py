@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-
 '''
-@author: hzw77, gjz5038
-
 Deep reinforcement learning agent
 
 '''
