@@ -91,8 +91,9 @@ Weights $\alpha$ are set in `conf/grid_2x2/sumo_agent.conf`.
 We approximate the optimal action-value function:
 
 $$
-Q^{*}(s, a) = \mathbb{E}\left[ r + \gamma \max_{a'} Q^{*}(s', a') \mid s, a \right]
+Q^{*}(s, a) = \mathbb{E}[\, r + \gamma \max_{a'} Q^{*}(s', a') \mid s, a \,]
 $$
+
 
 Training minimizes the TD loss:
 
