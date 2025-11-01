@@ -1,0 +1,1 @@
+count,action,delay,duration,duration_of_vehicles_left,emergency,flickering,num_of_vehicles_at_entering,num_of_vehicles_in_system,num_of_vehicles_left,partial_duration,queue_length,wait_time
