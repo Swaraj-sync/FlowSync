@@ -2,7 +2,7 @@
 
 ### 🧠 Overview
 
-**FlowSync** is a novel **Multi-Agent Deep Reinforcement Learning (MARL)** framework for **adaptive traffic signal control**.
+**FlowSync** is a novel **Multi-Agent Deep Reinforcement Learning (MARL)** framework for **adaptive traffic signal control**.  
 Each intersection in a network is modeled as an independent agent that cooperatively learns to optimize signal timing to minimize **global traffic congestion**.
 
 A key innovation of FlowSync is the **neighbor-state attention mechanism**, enabling agents to dynamically weigh the state of nearby intersections to achieve **coordinated, emergent behavior**.
@@ -14,78 +14,74 @@ A key innovation of FlowSync is the **neighbor-state attention mechanism**, enab
 ## 1. 🧩 Problem Formulation: Multi-Agent MDP
 
 We formulate the Traffic Signal Control (TSC) task as a **Multi-Agent Markov Decision Process (MDP)**:
-[
+
+$$
 (\mathcal{S}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma)
-]
+$$
 
 ### Agents
+- $\mathcal{I} = \{1, 2, ..., N\}$
+- Each agent $i \in \mathcal{I}$ corresponds to one intersection.
 
-* ( \mathcal{I} = {1, 2, ..., N} )
-* Each agent ( i \in \mathcal{I} ) corresponds to one intersection.
+### Global State ($\mathcal{S}$)
+- $s = (s_1, s_2, ..., s_N)$  
+- Each agent only observes its **local state** $s_i$.
 
-### Global State (( \mathcal{S} ))
+### Action Space ($\mathcal{A}$)
+- $A_i = \{\text{Keep Phase}, \text{Change Phase}\}$
 
-* ( s = (s_1, s_2, ..., s_N) )
-* Each agent only observes its **local state** ( s_i ).
+### Transition Probability ($\mathcal{P}$)
+- Defined by the SUMO simulator: $P(s' | s, a)$
 
-### Action Space (( \mathcal{A} ))
+### Reward Function ($\mathcal{R}$)
+- Each agent receives a **local reward** $r_i = R(s, a, s')$
 
-* ( A_i = {\text{Keep Phase}, \text{Change Phase}} )
+### Discount Factor ($\gamma$)
+- Discounting future rewards: $\gamma \in [0, 1]$
 
-### Transition Probability (( \mathcal{P} ))
+**Objective:**
 
-* Defined by the SUMO simulator: ( P(s' | s, a) )
-
-### Reward Function (( \mathcal{R} ))
-
-* Each agent receives a **local reward** ( r_i = R(s, a, s') )
-
-### Discount Factor (( \gamma ))
-
-* Discounting future rewards: ( \gamma \in [0, 1] )
-
-Objective:
-[
-\pi^**i = \arg\max*{\pi_i} \mathbb{E} \left[ \sum_{k=t}^{\infty} \gamma^{k-t} r_k \right]
-]
+$$
+\pi^*_i = \arg\max_{\pi_i} \mathbb{E} \left[ \sum_{k=t}^{\infty} \gamma^{k-t} r_k \right]
+$$
 
 ---
 
-## 1.1. 🔍 State Space (( s_i ))
+## 1.1. 🔍 State Space ($s_i$)
 
 Each agent’s **local state** is hierarchical, combining **visual**, **tabular**, and **neighbor** information:
 
-| Component       | Type             | Description                        |
-| --------------- | ---------------- | ---------------------------------- |
-| Local Map       | 150×150×1 tensor | Visual vehicle positions           |
-| Queue Length    | 1×12 vector      | Per-lane vehicle queues            |
-| Vehicle Count   | 1×12 vector      | Per-lane vehicle counts            |
-| Waiting Time    | 1×12 vector      | Per-lane accumulated wait          |
-| Current Phase   | One-hot          | Current signal phase               |
-| Neighbor Queues | 4×12 tensor      | Queue lengths of up to 4 neighbors |
-| Neighbor Phases | 4×1 tensor       | Current phase of up to 4 neighbors |
-| Neighbor Mask   | 1×4 binary       | Indicates active neighbors         |
+| Component | Type | Description |
+|------------|------|-------------|
+| Local Map | 150×150×1 tensor | Visual vehicle positions |
+| Queue Length | 1×12 vector | Per-lane vehicle queues |
+| Vehicle Count | 1×12 vector | Per-lane vehicle counts |
+| Waiting Time | 1×12 vector | Per-lane accumulated wait |
+| Current Phase | One-hot | Current signal phase |
+| Neighbor Queues | 4×12 tensor | Queue lengths of up to 4 neighbors |
+| Neighbor Phases | 4×1 tensor | Current phase of up to 4 neighbors |
+| Neighbor Mask | 1×4 binary | Indicates active neighbors |
 
 ---
 
-## 1.2. ⚙️ Action Space (( a_i ))
+## 1.2. ⚙️ Action Space ($a_i$)
 
-| Action               | Description                               |
-| -------------------- | ----------------------------------------- |
-| **0 — Keep Phase**   | Continue the current signal phase         |
+| Action | Description |
+|---------|-------------|
+| **0 — Keep Phase** | Continue the current signal phase |
 | **1 — Change Phase** | Switch to the next phase (yellow → green) |
 
 ---
 
-## 1.3. 💰 Reward Function (( r_i ))
+## 1.3. 💰 Reward Function ($r_i$)
 
 A **penalty-based reward** encouraging efficient traffic flow:
 
-[
-r_i = -\alpha_1 \sum \text{queue} - \alpha_2 \sum \text{wait} - \alpha_3 \sum (1 - v/v_{\max}) - \alpha_4 \cdot \text{flicker} + \alpha_5 \sum v_{\text{left}}
-]
+$$
+r_i = -\alpha_1 \sum \text{queue} - \alpha_2 \sum \text{wait} - \alpha_3 \sum \left(1 - \frac{v}{v_{\max}}\right) - \alpha_4 \cdot \text{flicker} + \alpha_5 \sum v_{\text{left}}
+$$
 
-Weights ( \alpha ) are defined in
+Weights $\alpha$ are defined in  
 [`conf/grid_2x2/sumo_agent.conf`](conf/grid_2x2/sumo_agent.conf)
 
 ---
@@ -96,88 +92,90 @@ Weights ( \alpha ) are defined in
 
 We approximate the optimal action-value function:
 
-[
-Q^*(s, a) = \mathbb{E}[r + \gamma \max_{a'} Q^*(s', a') | s, a]
-]
+$$
+Q^*(s, a) = \mathbb{E}[r + \gamma \max_{a'} Q^*(s', a') \mid s, a]
+$$
 
 Training minimizes TD error:
-[
-L(\theta) = \mathbb{E}*{(s,a,r,s')}[(y_i - Q(s,a; \theta))^2]
-]
-[
-y_i = r + \gamma \max*{a'} Q(s', a'; \theta^-)
-]
+
+$$
+L(\theta) = \mathbb{E}_{(s,a,r,s')}[(y_i - Q(s,a; \theta))^2]
+$$
+
+where
+
+$$
+y_i = r + \gamma \max_{a'} Q(s', a'; \theta^-)
+$$
 
 ---
 
 ### 2.2. 🧩 FlowSync Neural Architecture
 
 **Inputs:**
-
-* Visual, tabular, and neighbor data streams.
+- Visual, tabular, and neighbor data streams.
 
 **Steps:**
 
 1. **Local Feature Extraction**
-
-   * **Visual Encoder:** CNN → 32@8×8 + 16@4×4 filters
-     → Output: ( v_{\text{map}} )
-   * **Vector Encoder:** Dense layers over queue, wait, phase vectors
-     → Output: ( v_{\text{local}} )
-   * **Local Embedding:** Concatenate → Dense → ( e_{\text{local}} )
+   - **Visual Encoder:** CNN → 32@8×8 + 16@4×4 filters  
+     → Output: $v_{\text{map}}$
+   - **Vector Encoder:** Dense layers over queue, wait, phase vectors  
+     → Output: $v_{\text{local}}$
+   - **Local Embedding:** Concatenate → Dense → $e_{\text{local}}$
 
 2. **Coordination via Attention**
+   - Compute **neighbor embeddings** and apply **dot-product attention**:
 
-   * Compute **neighbor embeddings** and apply **dot-product attention**:
-     [
+     $$
      \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
-     ]
+     $$
+
+     → Output: $c_{\text{neighbor}}$
 
 3. **Q-Value Head**
-
-   * Concatenate ( e_{\text{local}} ) + ( c_{\text{neighbor}} )
-   * Pass through 2 Dense (sigmoid) layers
-   * Output: 2 linear units for {Keep, Change}
+   - Concatenate $e_{\text{local}}$ + $c_{\text{neighbor}}$
+   - Pass through 2 Dense (sigmoid) layers
+   - Output: 2 linear units for {Keep, Change}
 
 ---
 
 ## 3. 🧪 Experimental Setup
 
-| Setting        | Value                  |
-| -------------- | ---------------------- |
-| Environment    | SUMO                   |
-| Scenario       | 2×2 grid (J1–J4)       |
+| Setting | Value |
+|----------|-------|
+| Environment | SUMO |
+| Scenario | 2×2 grid (J1–J4) |
 | Control Script | `traffic_light_dqn.py` |
 
 ---
 
 ### 3.1. ⚙️ Key Hyperparameters
 
-| Parameter         | Value | Description                   |
-| ----------------- | ----- | ----------------------------- |
-| LEARNING_RATE     | 0.001 | RMSprop LR                    |
-| GAMMA             | 0.8   | Discount factor               |
-| BATCH_SIZE        | 20    | Batch per update              |
-| MAX_MEMORY_LEN    | 1000  | Replay buffer size            |
-| UPDATE_PERIOD     | 300   | Simulation update period      |
-| UPDATE_Q_BAR_FREQ | 5     | Target network sync frequency |
-| D_DENSE           | 20    | Hidden Dense size             |
-| EPSILON           | 0.00  | Exploration rate              |
+| Parameter | Value | Description |
+|------------|--------|-------------|
+| LEARNING_RATE | 0.001 | RMSprop LR |
+| GAMMA | 0.8 | Discount factor |
+| BATCH_SIZE | 20 | Batch per update |
+| MAX_MEMORY_LEN | 1000 | Replay buffer size |
+| UPDATE_PERIOD | 300 | Simulation update period |
+| UPDATE_Q_BAR_FREQ | 5 | Target network sync frequency |
+| D_DENSE | 20 | Hidden Dense size |
+| EPSILON | 0.00 | Exploration rate |
 
 ---
 
 ## 4. 📊 Results & Analysis
 
-Agents trained on `grid_2x2` scenario:
+Agents trained on `grid_2x2` scenario:  
 [`data/grid_2x2/grid.sumocfg`](data/grid_2x2/grid.sumocfg)
 
-![Learning Curve]
+![Learning Curve](https://www.google.com/search?q=image_e04ea0.png)
 
 ### Observations
-
-* **Learning Trend:** Upward trend in rewards (−0.0801 → −0.0794)
+- **Learning Trend:** Upward trend in rewards (−0.0801 → −0.0794)  
   → agents reduce penalties → better traffic flow.
-* **Agent Specialization:** J4 (low congestion) vs. J1–J3 (high load).
+- **Agent Specialization:** J4 (low congestion) vs. J1–J3 (high load).  
   Despite differences, all exhibit **positive learning slopes**.
 
 ---
@@ -185,11 +183,10 @@ Agents trained on `grid_2x2` scenario:
 ## 5. 🧭 How to Run
 
 ### 5.1. Prerequisites
-
 ```bash
 sudo apt install sumo sumo-tools
 pip install tensorflow numpy traci pandas matplotlib
-```
+````
 
 ---
 
@@ -279,4 +276,4 @@ FlowSync/
 * Inspired by **MARL attention-based coordination** frameworks
 * Simulation powered by **SUMO**
 
----
+```
