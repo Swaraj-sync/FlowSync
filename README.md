@@ -93,7 +93,7 @@ Weights $\alpha$ are defined in
 We approximate the optimal action-value function:
 
 $$
-Q^{*}(s, a) = \mathbb{E}\left[r + \gamma \max_{a'} Q^{*}(s', a') \,\middle|\, s, a\right]
+Q^{*}(s, a) = \mathbb{E}\!\left[ r + \gamma \max_{a'} Q^{*}(s', a') \mid s, a \right]
 $$
 
 Training minimizes TD error:
@@ -128,7 +128,7 @@ $$
    - Compute **neighbor embeddings** and apply **dot-product attention**:
 
      $$
-     \text{Attention}(Q, K, V) = \text{softmax}\!\left(\frac{QK^{\mathrm{T}}}{\sqrt{d_k}}\right)V
+     \text{Attention}(Q, K, V) \;=\; \text{softmax}\!\left(\frac{Q K^{\top}}{\sqrt{d_k}}\right)\,V
      $$
 
      → Output: $c_{\text{neighbor}}$
@@ -170,7 +170,7 @@ $$
 Agents trained on `grid_2x2` scenario:  
 [`data/grid_2x2/grid.sumocfg`](data/grid_2x2/grid.sumocfg)
 
-![Learning Curve](https://drive.google.com/file/d/1LHuoSf58HKrJn_jX4r3nzfXPpACBALqE/view?usp=sharing)
+![Learning Curve](./rewards_over_time.png)
 
 ### Observations
 - **Learning Trend:** Upward trend in rewards (−0.0801 → −0.0794)  
