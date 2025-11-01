@@ -2,42 +2,41 @@
 
 ### 🧠 Overview
 
-**FlowSync** is a novel **Multi-Agent Deep Reinforcement Learning (MARL)** framework for **adaptive traffic signal control**.  
-Each intersection in a network is modeled as an independent agent that cooperatively learns to optimize signal timing to minimize **global traffic congestion**.
+**FlowSync** is a Multi-Agent Deep Reinforcement Learning (MARL) framework for adaptive traffic signal control.  
+Each intersection is modeled as an agent that cooperatively learns to optimize signal timing to minimize **global traffic congestion**.
 
-A key innovation of FlowSync is the **neighbor-state attention mechanism**, enabling agents to dynamically weigh the state of nearby intersections to achieve **coordinated, emergent behavior**.
+A key innovation is a **neighbor-state attention mechanism**, enabling agents to dynamically weigh neighboring intersections’ states and learn coordinated behaviour.
 
-> 🧩 Built with **Python**, **TensorFlow/Keras**, and validated in the **SUMO (Simulation of Urban MObility)** environment.
+> Built with **Python**, **TensorFlow/Keras**, and validated using **SUMO (Simulation of Urban MObility)**.
 
 ---
 
-## 1. 🧩 Problem Formulation: Multi-Agent MDP
+## 1. Problem Formulation: Multi-Agent MDP
 
-We formulate the Traffic Signal Control (TSC) task as a **Multi-Agent Markov Decision Process (MDP)**:
+We formulate Traffic Signal Control (TSC) as a Multi-Agent Markov Decision Process (MDP):
 
 $$
 (\mathcal{S}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma)
 $$
 
 ### Agents
-- $\mathcal{I} = \{1, 2, ..., N\}$
-- Each agent $i \in \mathcal{I}$ corresponds to one intersection.
+- $\mathcal{I} = \{1, 2, \dots, N\}$ — each agent $i$ is an intersection.
 
-### Global State ($\mathcal{S}$)
-- $s = (s_1, s_2, ..., s_N)$  
-- Each agent only observes its **local state** $s_i$.
+### Global state ($\mathcal{S}$)
+- $s = (s_1, s_2, \dots, s_N)$  
+- Each agent observes only its local state $s_i$.
 
-### Action Space ($\mathcal{A}$)
+### Action space ($\mathcal{A}$)
 - $A_i = \{\text{Keep Phase}, \text{Change Phase}\}$
 
-### Transition Probability ($\mathcal{P}$)
-- Defined by the SUMO simulator: $P(s' \mid s, a)$
+### Transition probability ($\mathcal{P}$)
+- Determined by the SUMO simulator: $P(s' \mid s, a)$
 
-### Reward Function ($\mathcal{R}$)
-- Each agent receives a **local reward** $r_i = R(s, a, s')$
+### Reward function ($\mathcal{R}$)
+- Each agent receives local reward $r_i = R(s, a, s')$
 
-### Discount Factor ($\gamma$)
-- Discounting future rewards: $\gamma \in [0, 1]$
+### Discount factor ($\gamma$)
+- $\gamma \in [0, 1]$
 
 **Objective:**
 
@@ -47,62 +46,61 @@ $$
 
 ---
 
-## 1.1. 🔍 State Space ($s_i$)
+## 1.1. State Space ($s_i$)
 
-Each agent’s **local state** is hierarchical, combining **visual**, **tabular**, and **neighbor** information:
+Each agent’s local state combines visual, tabular and neighbor information:
 
-| Component | Type | Description |
-|------------|------|-------------|
-| Local Map | 150×150×1 tensor | Visual vehicle positions |
-| Queue Length | 1×12 vector | Per-lane vehicle queues |
-| Vehicle Count | 1×12 vector | Per-lane vehicle counts |
-| Waiting Time | 1×12 vector | Per-lane accumulated wait |
-| Current Phase | One-hot | Current signal phase |
-| Neighbor Queues | 4×12 tensor | Queue lengths of up to 4 neighbors |
-| Neighbor Phases | 4×1 tensor | Current phase of up to 4 neighbors |
-| Neighbor Mask | 1×4 binary | Indicates active neighbors |
-
----
-
-## 1.2. ⚙️ Action Space ($a_i$)
-
-| Action | Description |
-|---------|-------------|
-| **0 — Keep Phase** | Continue the current signal phase |
-| **1 — Change Phase** | Switch to the next phase (yellow → green) |
+| Component | Shape / Type | Description |
+|---|---:|---|
+| Local Map | `150 × 150 × 1` | Visual occupancy map of nearby vehicles |
+| Queue Length | `1 × 12` | Per-lane queue counts |
+| Vehicle Count | `1 × 12` | Per-lane vehicle counts |
+| Waiting Time | `1 × 12` | Per-lane accumulated waiting time |
+| Current Phase | one-hot | Current signal phase |
+| Neighbor Queues | `4 × 12` | Up to 4 neighbors' queue lengths |
+| Neighbor Phases | `4 × 1` | Up to 4 neighbors' current phases |
+| Neighbor Mask | `1 × 4` | Binary mask indicating active neighbors |
 
 ---
 
-## 1.3. 💰 Reward Function ($r_i$)
+## 1.2. Action Space ($a_i$)
 
-A **penalty-based reward** encouraging efficient traffic flow:
+| Action | Meaning |
+|---:|---|
+| `0` — Keep Phase | Continue current traffic phase |
+| `1` — Change Phase | End current phase (yellow) and move to next |
+
+---
+
+## 1.3. Reward Function ($r_i$)
+
+Penalty-based reward designed to reduce congestion:
 
 $$
-r_i = -\alpha_1 \sum \text{queue} - \alpha_2 \sum \text{wait} - \alpha_3 \sum \left(1 - \frac{v}{v_{\max}}\right) - \alpha_4 \cdot \text{flicker} + \alpha_5 \sum v_{\text{left}}
+r_i = -\alpha_1 \sum \text{queue} - \alpha_2 \sum \text{wait} - \alpha_3 \sum\left(1 - \frac{v}{v_{\max}}\right) - \alpha_4 \cdot \text{flicker} + \alpha_5 \sum v_{\text{left}}
 $$
 
-Weights $\alpha$ are defined in  
-[`conf/grid_2x2/sumo_agent.conf`](conf/grid_2x2/sumo_agent.conf)
+Weights $\alpha$ are set in `conf/grid_2x2/sumo_agent.conf`.
 
 ---
 
-## 2. 🧠 Methodology
+## 2. Methodology
 
 ### 2.1. Deep Q-Network (DQN) Formulation
 
 We approximate the optimal action-value function:
 
 $$
-Q^{*}(s, a) = \mathbb{E}\!\left[ r + \gamma \max_{a'} Q^{*}(s', a') \mid s, a \right]
+Q^{*}(s, a) = \mathbb{E}\left[ r + \gamma \max_{a'} Q^{*}(s', a') \mid s, a \right]
 $$
 
-Training minimizes TD error:
+Training minimizes the TD loss:
 
 $$
 L(\theta) = \mathbb{E}_{(s,a,r,s')}\left[\left(y_i - Q(s,a;\theta)\right)^2\right]
 $$
 
-where
+with
 
 $$
 y_i = r + \gamma \max_{a'} Q(s', a'; \theta^{-})
@@ -110,96 +108,81 @@ $$
 
 ---
 
-### 2.2. 🧩 FlowSync Neural Architecture
+### 2.2. FlowSync Neural Architecture
 
-**Inputs:**
-- Visual, tabular, and neighbor data streams.
+**Inputs:** visual map, local vectors, neighbor states.
 
-**Steps:**
+**Local feature extraction**
+- **Visual Encoder:** small CNN (32 filters @ 8×8, 16 filters @ 4×4) → $v_{\text{map}}$
+- **Vector Encoder:** dense layers on concatenated per-lane vectors → $v_{\text{local}}$
+- **Local embedding:** concatenate $v_{\text{map}}$ and $v_{\text{local}}$ → dense → $e_{\text{local}}$
 
-1. **Local Feature Extraction**
-   - **Visual Encoder:** CNN → 32@8×8 + 16@4×4 filters  
-     → Output: $v_{\text{map}}$
-   - **Vector Encoder:** Dense layers over queue, wait, phase vectors  
-     → Output: $v_{\text{local}}$
-   - **Local Embedding:** Concatenate → Dense → $e_{\text{local}}$
+**Coordination via attention**
+- Form neighbor embeddings then apply dot-product attention:
 
-2. **Coordination via Attention**
-   - Compute **neighbor embeddings** and apply **dot-product attention**:
+$$
+\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{Q K^{T}}{\sqrt{d_k}}\right)V
+$$
 
-     $$
-     \text{Attention}(Q, K, V) \;=\; \text{softmax}\!\left(\frac{Q K^{\top}}{\sqrt{d_k}}\right)\,V
-     $$
+Output: $c_{\text{neighbor}}$.
 
-     → Output: $c_{\text{neighbor}}$
-
-3. **Q-Value Head**
-   - Concatenate $e_{\text{local}} + c_{\text{neighbor}}$
-   - Pass through 2 Dense (sigmoid) layers
-   - Output: 2 linear units for {Keep, Change}
+**Q-value head**
+- Concatenate $e_{\text{local}}$ and $c_{\text{neighbor}}$, pass through two dense layers, output 2 linear units for `{Keep, Change}`.
 
 ---
 
-## 3. 🧪 Experimental Setup
+## 3. Experimental Setup
 
 | Setting | Value |
-|----------|-------|
+|---|---|
 | Environment | SUMO |
 | Scenario | 2×2 grid (J1–J4) |
-| Control Script | `traffic_light_dqn.py` |
+| Controller | `traffic_light_dqn.py` |
+
+### 3.1. Key Hyperparameters
+
+| Parameter | Value |
+|---|---:|
+| LEARNING_RATE | 0.001 |
+| GAMMA | 0.8 |
+| BATCH_SIZE | 20 |
+| MAX_MEMORY_LEN | 1000 |
+| UPDATE_PERIOD | 300 |
+| UPDATE_Q_BAR_FREQ | 5 |
+| D_DENSE | 20 |
+| EPSILON | 0.00 |
 
 ---
 
-### 3.1. ⚙️ Key Hyperparameters
+## 4. Results & Analysis
 
-| Parameter | Value | Description |
-|------------|--------|-------------|
-| LEARNING_RATE | 0.001 | RMSprop LR |
-| GAMMA | 0.8 | Discount factor |
-| BATCH_SIZE | 20 | Batch per update |
-| MAX_MEMORY_LEN | 1000 | Replay buffer size |
-| UPDATE_PERIOD | 300 | Simulation update period |
-| UPDATE_Q_BAR_FREQ | 5 | Target network sync frequency |
-| D_DENSE | 20 | Hidden Dense size |
-| EPSILON | 0.00 | Exploration rate |
-
----
-
-## 4. 📊 Results & Analysis
-
-Agents trained on `grid_2x2` scenario:  
-[`data/grid_2x2/grid.sumocfg`](data/grid_2x2/grid.sumocfg)
+Agents were trained on the `grid_2x2` scenario (`data/grid_2x2/grid.sumocfg`).
 
 ![Learning Curve](./rewards_over_time.png)
 
-### Observations
-- **Learning Trend:** Upward trend in rewards (−0.0801 → −0.0794)  
-  → agents reduce penalties → better traffic flow.
-- **Agent Specialization:** J4 (low congestion) vs. J1–J3 (high load).  
-  Despite differences, all exhibit **positive learning slopes**.
+**Observations**
+- Learning trend: average reward improves over training (penalties reduced).
+- Agent specialization: some intersections handle more traffic; all agents still show learning improvement.
 
 ---
 
-## 5. 🧭 How to Run
+## 5. How to Run
 
 ### 5.1. Prerequisites
+
 ```bash
 sudo apt install sumo sumo-tools
 pip install tensorflow numpy traci pandas matplotlib
 ````
 
----
-
-### 5.2. Generate 2×2 Map (First-Time Only)
+### 5.2. Generate 2×2 Map (first-time only)
 
 ```bash
 cd data/grid_2x2/
 netconvert --node-files=grid.nod.xml --edge-files=grid.edg.xml --output-file=grid.net.xml
 ```
 
----
-
-### 5.3. Configure and Run
+### 5.3. Configure and run
 
 Edit `runexp.py`:
 
@@ -209,68 +192,56 @@ sumoBinary_gui   = "/usr/bin/sumo-gui"
 setting_memo     = "grid_2x2"
 ```
 
-Run training:
+Run:
 
 ```bash
 python runexp.py
 ```
 
-> ⚡ For faster training, set `sumo_cmd_str = sumoCmd_nogui`.
+For headless runs, ensure `sumo_cmd_str` points to the nogui binary.
 
----
-
-### 5.4. Visualize Results
+### 5.4. Visualize results
 
 ```bash
 python plot_results.py
 ```
 
-Generates `learning_curve.png` from the latest `memories.txt` log.
+This generates `rewards_over_time.png` from the latest `memories.txt`.
 
 ---
 
-## 6. 📝 Citation
+## 6. Citation
 
-This project extends the concepts from **FlowSync** and builds upon the single-agent **IntelliLight** framework:
+This implementation builds on the ideas in the IntelliLight work:
 
 > Hua Wei*, Guanjie Zheng*, Huaxiu Yao, Zhenhui Li,
-> *IntelliLight: A Reinforcement Learning Approach for Intelligent Traffic Light Control*,
-> KDD 2018, London, UK.
-> [[Source]](https://github.com/wingsweihua/IntelliLight)
+> *IntelliLight: A Reinforcement Learning Approach for Intelligent Traffic Light Control*, KDD 2018.
+> [IntelliLight repository](https://github.com/wingsweihua/IntelliLight)
 
 ---
 
-## 🧱 Repository Structure
+## Repository structure
 
 ```
 FlowSync/
-│
 ├── conf/
 │   └── grid_2x2/
-│       ├── deeplight_agent.conf
-│       └── sumo_agent.conf
-│
 ├── data/
 │   └── grid_2x2/
-│       ├── grid.nod.xml
-│       ├── grid.edg.xml
-│       ├── grid.rou.xml
-│       └── grid.sumocfg
-│
 ├── models/
 │   ├── deeplight_agent.py
 │   ├── network_agent.py
 │   └── agent.py
-│
 ├── runexp.py
 ├── traffic_light_dqn.py
 ├── plot_results.py
+├── rewards_over_time.png
 └── README.md
 ```
 
 ---
 
-## 🧩 Acknowledgements
+## Acknowledgements
 
 * Built on **IntelliLight** architecture (Wei et al., 2018)
 * Inspired by **MARL attention-based coordination** frameworks
