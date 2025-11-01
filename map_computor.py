@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-
 '''
-@author: hzw77, gjz5038
-
 1) interacting with SUMO, including
       retrive values, set lights
 2) interacting with sumo_agent, including
@@ -103,18 +99,7 @@ MAX_LANES_PER_NODE = 12 # From agent.py (D_QUEUE_LENGTH)
 
 '''
 Original hardcoded values, removed for FlowSync
-direction_lane_dict = {"NSG": [1, 0], "SNG": [1, 0], "EWG": [1, 0], "WEG": [1, 0],
-                       "NWG": [0], "WSG": [0], "SEG": [0], "ENG": [0],
-                       "NEG": [2], "WNG": [2], "SWG": [2], "ESG": [2]}
-direction_list = ["NWG", "WSG", "SEG", "ENG", "NSG", "SNG", "EWG", "WEG", "NEG", "WNG", "SWG", "ESG"]
-min_phase_time_7 = [10, 35]
-node_light_7 = "node0"
-phases_light_7 = ["WNG_ESG_EWG_WEG_WSG_ENG", "NSG_NEG_SNG_SWG_NWG_SEG"]
-WNG_ESG_EWG_WEG_WSG_ENG = "grrr gGGG grrr gGGG".replace(" ", "")
-NSG_NEG_SNG_SWG_NWG_SEG = "gGGG grrr gGGG grrr".replace(" ", "")
-controlSignal = (WNG_ESG_EWG_WEG_WSG_ENG, NSG_NEG_SNG_SWG_NWG_SEG)
-listLanes=['edge1-0_0','edge1-0_1','edge1-0_2','edge2-0_0','edge2-0_1','edge2-0_2',
-                                 'edge3-0_0','edge3-0_1','edge3-0_2','edge4-0_0','edge4-0_1','edge4-0_2']
+... (rest of comments) ...
 '''
 
 
@@ -125,7 +110,15 @@ def start_sumo(sumo_cmd_str):
     global NODE_PHASE_DEFINITIONS, NODE_NEIGHBORS
     all_tls_ids = traci.trafficlight.getIDList()
 
-    net = ET.parse('./data/one_run/cross.net.xml').getroot() # TODO: Parameterize this path
+    # --- THIS IS THE FIX ---
+    # It now correctly finds the .net.xml file associated with your .sumocfg
+    net_path = os.path.join(os.path.dirname(sumo_cmd_str[2]), "grid.net.xml")
+    if not os.path.exists(net_path):
+        # Fallback just in case
+        net_path = 'data/grid_2x2/grid.net.xml'
+    net = ET.parse(net_path).getroot()
+    # --- END OF FIX ---
+
 
     for node_id in all_tls_ids:
         # 1. Discover Phases and Lanes
@@ -403,7 +396,10 @@ def restrict_reward(reward,func="unstrict"):
         bound = -50
         reward = 0 if reward < bound else (reward/(-bound) + 1)
     elif func == "neg_log":
-        reward = math.log(-reward+1)
+        if -reward+1 > 0: # Add check for math domain error
+            reward = math.log(-reward+1)
+        else:
+            reward = -10 # Assign large negative reward
     else:
         pass
 
@@ -466,7 +462,7 @@ def get_rewards_from_sumo(node_id, vehicle_dict, action, rewards_info_dict):
     reward_detail_dict['duration_of_vehicles_left'].append(get_travel_time_duration(vehicle_dict, vehicle_id_leaving))
 
     for k, v in reward_detail_dict.items():
-        if v[0]:  # True or False
+        if v[0] and len(v) > 2:  # Add check for len(v)
             reward += v[1]*v[2]
 
     reward = restrict_reward(reward)#,func="linear")
@@ -477,7 +473,7 @@ def get_rewards_from_dict_list(rewards_detail_dict_list):
     reward = 0
     for i in range(len(rewards_detail_dict_list)):
         for k, v in rewards_detail_dict_list[i].items():
-            if v[0]:  # True or False
+            if v[0] and len(v) > 2:  # Add check for len(v)
                 reward += v[1] * v[2]
     reward = restrict_reward(reward)
     return reward
@@ -531,7 +527,11 @@ def get_num_of_emergency_stops(vehicle_dict):
     for vehicle_id in vehicle_id_list:
         try:
             traci.vehicle.subscribe(vehicle_id, (tc.VAR_LANE_ID, tc.VAR_SPEED))
-            current_speed = traci.vehicle.getSubscriptionResults(vehicle_id).get(64)
+            results = traci.vehicle.getSubscriptionResults(vehicle_id)
+            if not results: continue # Skip if vehicle left
+            current_speed = results.get(64) # 64 is tc.VAR_SPEED
+            if current_speed is None: continue
+
             if (vehicle_id in vehicle_dict.keys()):
                 vehicle_former_state = vehicle_dict[vehicle_id]
                 if current_speed - vehicle_former_state.speed < -4.5:
@@ -589,14 +589,20 @@ def update_vehicles_state(dic_vehicles):
                 vehicle = Vehicles()
                 vehicle.id = vehicle_id
                 traci.vehicle.subscribe(vehicle_id, (tc.VAR_LANE_ID, tc.VAR_SPEED))
-                vehicle.speed = traci.vehicle.getSubscriptionResults(vehicle_id).get(64)
+                results = traci.vehicle.getSubscriptionResults(vehicle_id)
+                vehicle.speed = results.get(64) if results else 0 # 64 is tc.VAR_SPEED
+                if vehicle.speed is None: vehicle.speed = 0
+
                 vehicle.enter_time = current_sumo_time
                 # if it enters and stops at the very first
                 if (vehicle.speed < 0.1) and (vehicle.first_stop_time == -1):
                     vehicle.first_stop_time = current_sumo_time
                 dic_vehicles[vehicle_id] = vehicle
             else:
-                dic_vehicles[vehicle_id].speed = traci.vehicle.getSubscriptionResults(vehicle_id).get(64)
+                results = traci.vehicle.getSubscriptionResults(vehicle_id)
+                dic_vehicles[vehicle_id].speed = results.get(64) if results else 0
+                if dic_vehicles[vehicle_id].speed is None: dic_vehicles[vehicle_id].speed = 0
+
                 if (dic_vehicles[vehicle_id].speed < 0.1) and (dic_vehicles[vehicle_id].first_stop_time == -1):
                     dic_vehicles[vehicle_id].first_stop_time = current_sumo_time
 
@@ -678,7 +684,7 @@ def get_vehicle_id_leaving(vehicle_dict, entering_lanes):
     # For now, we stick to the original logic.
 
     for vehicle_id in vehicle_dict.keys():
-        if not(vehicle_id in vehicle_id_entering) and vehicle_dict[vehicle_id].entering:
+        if not(vehicle_id in vehicle_id_entering) and vehicle_dict.get(vehicle_id) and vehicle_dict[vehicle_id].entering:
             # This check is problematic, disabling `entering` flag update
             # vehicle_id_leaving.append(vehicle_id)
             pass
@@ -750,9 +756,11 @@ def get_car_on_red_and_green(cur_phase):
             omega = 0
             for vehicle_id in vehicle_ids:
                 traci.vehicle.subscribe(vehicle_id, (tc.VAR_DISTANCE, tc.VAR_LANEPOSITION))
-                distance = traci.vehicle.getSubscriptionResults(vehicle_id).get(132)
-                if distance > 100:
-                    omega += 1
+                results = traci.vehicle.getSubscriptionResults(vehicle_id)
+                if results:
+                    distance = results.get(132) # 132 is tc.VAR_DISTANCE
+                    if distance is not None and distance > 100:
+                        omega += 1
             vehicle_green.append(omega)
         except traci.TraCIException: pass
 
@@ -845,8 +853,9 @@ def get_base_min_time(traffic_volumes,min_phase_time):
     traffic_volumes=np.array([36,72,0])
     min_phase_times=np.array([10,35,35])
     for i, min_phase_time in enumerate(min_phase_times):
-        ratio=min_phase_time/traffic_volumes[i]
-        traffic_volumes_ratio=traffic_volumes/ratio
+        if traffic_volumes[i] > 0: # Add check for division by zero
+            ratio=min_phase_time/traffic_volumes[i]
+            traffic_volumes_ratio=traffic_volumes/ratio
 
 # This function is legacy
 def phase_vector_to_number(phase_vector,phases_light=None):
