@@ -1,11 +1,10 @@
 '''
-@author: hzw77, gjz5038
-
 python runexp.py
 
 --- FLOWSYNC MODIFIED ---
 This script is now a simple launcher for the multi-agent
 traffic_light_dqn.py coordinator.
+
 '''
 
 import random
@@ -17,7 +16,7 @@ import time
 
 # ================== CONFIGURATION ==================
 SEED = 31200
-setting_memo = "one_run" # This points to conf/one_run and data/one_run
+setting_memo = "grid_2x2" # This points to conf/one_run and data/one_run
 # ===================================================
 
 # --- Set random seeds ---
@@ -47,16 +46,16 @@ sumoBinary_gui = r"C:\Program Files (x86)\Eclipse\Sumo\bin\sumo-gui.exe"
 # Use GUI for testing to see what's happening
 sumoCmd = [sumoBinary_gui,
            '-c',
-           os.path.join(data_path, 'cross.sumocfg')]
+           os.path.join(data_path, 'grid.sumocfg')]
 
 sumoCmd_nogui = [sumoBinary_nogui,
                  '-c',
-                 os.path.join(data_path, 'cross.sumocfg')]
+                 os.path.join(data_path, 'grid.sumocfg')]
 
 # The pretrain config is also needed
 sumoCmd_nogui_pretrain = [sumoBinary_nogui,
                           '-c',
-                          os.path.join(data_path, 'cross_pretrain.sumocfg')]
+                          os.path.join(data_path, 'grid.sumocfg')]
 
 
 # --- Load and set experiment config ---
